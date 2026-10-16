@@ -1,0 +1,6 @@
+{
+  "name": "NeliStream - Live Football & TV Streaming Tanzania",
+  "description": "Tazama Azam Sports na channels zote za TV mubashara Tanzania, matokeo ya mpira live, na burudani ya kiwango cha juu kwenye NeliStream.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

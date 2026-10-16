@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient (Pure OLED Black) -->
+    <rect id="bg" width="512" height="512" fill="#000000" />
+
+    <!-- Left Pillar & Base Curve Gradient -->
+    <linearGradient id="leftPillarGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#0066ff" />
+      <stop offset="60%" stop-color="#0099ff" />
+      <stop offset="100%" stop-color="#00d2ff" />
+    </linearGradient>
+
+    <!-- Top Left Fold Ribbon Gradient (Vibrant Cyan Glow) -->
+    <linearGradient id="topFoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff" />
+      <stop offset="50%" stop-color="#00b4d8" />
+      <stop offset="100%" stop-color="#0077b6" />
+    </linearGradient>
+
+    <!-- Diagonal Front Ribbon Gradient -->
+    <linearGradient id="diagonalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00d2ff" />
+      <stop offset="40%" stop-color="#0091ff" />
+      <stop offset="100%" stop-color="#0055ff" />
+    </linearGradient>
+
+    <!-- Right Pillar Gradient (Deep Royal Blue with Soft Highlight) -->
+    <linearGradient id="rightPillarGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0084ff" />
+      <stop offset="40%" stop-color="#0066ff" />
+      <stop offset="100%" stop-color="#0044cc" />
+    </linearGradient>
+
+    <!-- Inner Shadow for Realistic Ribbon Fold Depth -->
+    <linearGradient id="innerShadowGrad" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#001845" stop-opacity="0.85" />
+      <stop offset="60%" stop-color="#002855" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#002855" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Subtle Right Fold Shadow -->
+    <linearGradient id="rightFoldShadow" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#001233" stop-opacity="0.75" />
+      <stop offset="100%" stop-color="#001233" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Pitch Black Canvas -->
+  <rect width="512" height="512" fill="#000000" />
+
+  <!-- 3D Ribbon Letter "N" Group -->
+  <g id="letter-n">
+    <!-- 1. Right Vertical Pillar (Behind Diagonal Ribbon at the bottom) -->
+    <rect x="306" y="92" width="102" height="328" rx="51" fill="url(#rightPillarGrad)" />
+
+    <!-- 2. Shadow on Right Pillar where Diagonal crosses over -->
+    <path d="M 306 310 C 306 310 330 330 360 350 L 408 380 C 400 405 375 420 357 420 C 329 420 306 397 306 369 Z" fill="url(#rightFoldShadow)" />
+
+    <!-- 3. Left Vertical Pillar -->
+    <rect x="104" y="92" width="102" height="328" rx="51" fill="url(#leftPillarGrad)" />
+
+    <!-- 4. Shadow under the Top Left Ribbon Fold -->
+    <path d="M 104 185 C 104 220 130 250 160 270 L 206 185 C 206 150 180 130 150 130 Z" fill="url(#innerShadowGrad)" />
+
+    <!-- 5. Main Diagonal Ribbon (Curls from Top Left smoothly to Bottom Right) -->
+    <path d="M 104 195 
+             C 104 125 150 92 205 92 
+             C 240 92 275 115 305 145 
+             L 398 335 
+             C 415 370 395 410 355 420 
+             C 330 425 300 410 280 380 
+             L 175 190 
+             C 160 165 140 150 120 150 
+             C 110 150 104 165 104 195 Z" 
+          fill="url(#diagonalGrad)" />
+
+    <!-- 6. Top Left Ribbon Smooth 3D Highlight & Curl Cap -->
+    <path d="M 104 190 
+             C 104 135 145 92 205 92 
+             C 215 92 206 115 190 130 
+             C 155 160 115 195 104 225 Z" 
+          fill="url(#topFoldGrad)" />
+  </g>
+</svg>

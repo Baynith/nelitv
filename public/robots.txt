@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://neliplay.firebaseapp.com/sitemap.xml
+Sitemap: https://ais-pre-x57vdavh536vx2ii6t3kek-238139809076.europe-west2.run.app/sitemap.xml

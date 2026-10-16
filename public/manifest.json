@@ -1,0 +1,67 @@
+{
+  "id": "nelitv-web-app",
+  "name": "NeliTv web - Live Football & Azam TV",
+  "short_name": "NeliTv web",
+  "description": "Tazama Azam Sports na channels zote za TV mubashara Tanzania kwenye kompyuta yako kama programu kamili ya NeliTv web.",
+  "start_url": "/?source=pwa_pc",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "categories": ["entertainment", "sports", "video"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512 any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Azam Sports 1 HD",
+      "short_name": "Azam Sports",
+      "description": "Tazama mechi za Ligi Kuu na CAF Live",
+      "url": "/#watch?channel=azam-sports-1",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Sinema Zetu",
+      "short_name": "Sinema Zetu",
+      "description": "Bongo Movie na Filamu za Kiswahili",
+      "url": "/#watch?channel=sinema-zetu",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

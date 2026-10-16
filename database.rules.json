@@ -1,0 +1,49 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.token.email === 'baynithcinema@gmail.com')",
+        ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'baynithcinema@gmail.com')"
+      }
+    },
+
+    "subscriptions": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || auth.token.email === 'baynithcinema@gmail.com')",
+        ".write": "auth != null && (auth.uid === $uid || auth.token.email === 'baynithcinema@gmail.com')"
+      }
+    },
+
+    "payments": {
+      "$orderId": {
+        ".read": "auth != null && (data.child('userId').val() === auth.uid || auth.token.email === 'baynithcinema@gmail.com')",
+        ".write": "auth != null && (!data.exists() || data.child('userId').val() === auth.uid || auth.token.email === 'baynithcinema@gmail.com')"
+      }
+    },
+
+    "payments_by_phone": {
+      "$phone": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    "azam_token": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email === 'baynithcinema@gmail.com'"
+    },
+
+    "cdn_token": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email === 'baynithcinema@gmail.com'"
+    },
+
+    "config": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email === 'baynithcinema@gmail.com'"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/payment/status/(.*)", "destination": "/api/payment/status?order_id=$1" },
+    { "source": "/api/payment/verify-phone/(.*)", "destination": "/api/payment/verify-phone?phone=$1" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
