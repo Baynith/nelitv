@@ -1,7 +1,7 @@
 export interface Channel {
   id: string;
   name: string;
-  category: 'sports' | 'entertainment' | 'movies';
+  category: 'sports' | 'entertainment' | 'movies' | 'kids' | 'religious';
   categoryLabel: string;
   description: string;
   thumbnailUrl: string;
@@ -297,6 +297,52 @@ export const CHANNELS: Channel[] = [
     description: 'Chumba cha sinema: Tazama filamu za kisasa zenye picha na sauti murua kabisa.',
     thumbnailUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQAGj1X9WOA4z-8QHpMnyMwkFE1zcYIwqOHtyvPqHWx3jIQ_BWXsVqRxDQd&s=10',
     streamUrl: 'https://d1j2u714xk898n.cloudfront.net/scheduler/scheduleMaster/145.m3u8',
+    streamFormat: 'hls',
+    isLive: true,
+  },
+  // ================= KIDS & FAMILY CHANNELS =================
+  {
+    id: 'tom-and-jerry',
+    name: 'Tom and Jerry',
+    category: 'kids',
+    categoryLabel: 'Watoto (Katuni & Vichekesho)',
+    description: 'Vipindi vya kufurahisha vya paka na panya maarufu duniani Tom and Jerry masaa 24.',
+    thumbnailUrl: 'https://i.pinimg.com/564x/d2/d0/c6/d2d0c69e6ec56ef717b9bbc23fc8e2fc.jpg',
+    streamUrl: 'https://live20.bozztv.com/giatvplayout7/giatv-208314/tracks-v1a1/mono.ts.m3u8',
+    streamFormat: 'hls',
+    isLive: true,
+  },
+  {
+    id: 'pop-animation',
+    name: 'POP Animation Network',
+    category: 'kids',
+    categoryLabel: 'Watoto & Vibonzo (Animation)',
+    description: 'Mtandao wa katuni na vibonzo murua kwa watoto na familia kutoka POP Animation.',
+    thumbnailUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSDr0lcgVyDkVpdt6fh7yCYby-shZUQ3K3e_pBwt6j8HA&s=10',
+    streamUrl: 'https://narrative-popkids-rakuten.amagi.tv/1080p/index.m3u8',
+    streamFormat: 'hls',
+    isLive: true,
+  },
+  {
+    id: 'tiny-pop',
+    name: 'TinyPop',
+    category: 'kids',
+    categoryLabel: 'Watoto Wachanga & Vibonzo',
+    description: 'Vipindi vya kielimu na burudani maalum kwa watoto wadogo na watoto wa shule.',
+    thumbnailUrl: 'https://pbs.twimg.com/profile_images/1709924048401293312/ewrDA0Pp_400x400.jpg',
+    streamUrl: 'https://amg01753-narrativeuk-amg01753c1-rakuten-uk-2339.playouts.now.amagi.tv/1080p/index.m3u8',
+    streamFormat: 'hls',
+    isLive: true,
+  },
+  // ================= RELIGIOUS CHANNELS =================
+  {
+    id: 'catholic-tv',
+    name: 'Catholic Tv',
+    category: 'religious',
+    categoryLabel: 'Dini & Ibada (Kikatoliki)',
+    description: 'Matangazo ya moja kwa moja ya misa takatifu, sala ya rozari, na mafundisho ya kiroho.',
+    thumbnailUrl: 'https://media.licdn.com/dms/image/v2/C560BAQGzUvEQbbnRsQ/company-logo_200_200/company-logo_200_200/0/1673453057636/the_catholictv_network_logo?e=2147483647&v=beta&t=mo3aj54Cp47KuRmamrXZKe3L-zMyRpK2YYkwEW7et2U',
+    streamUrl: 'https://catholictvhd-lh.akamaized.net/hls/live/2043390/CTVLiveHD/playlist_1.m3u8',
     streamFormat: 'hls',
     isLive: true,
   }

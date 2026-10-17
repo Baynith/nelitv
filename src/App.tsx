@@ -14,6 +14,7 @@ import { useTVRemote } from './hooks/useTVRemote';
 import {
   UserProfile,
   getCachedUserProfile,
+  setCachedUserProfile,
   isUserSubscribed,
   initAutoLogin,
   listenToUserProfileRealtime,
@@ -21,6 +22,12 @@ import {
 } from './services/firebase';
 import { SplashScreen } from './components/SplashScreen';
 import { setupSecurityGuards } from './utils/security';
+import { Movie, fetchPublishedMovies, getDailyFeaturedMovies } from './services/movieService';
+import { MovieHeroBanner } from './components/MovieHeroBanner';
+import { MoviesPage } from './components/MoviesPage';
+import { MovieDetailsModal } from './components/MovieDetailsModal';
+import { MediaStreamPlayer } from './components/MediaStreamPlayer';
+import { getSubscriptionFromSupabaseByAny } from './services/supabase';
 import {
   Play,
   ShieldCheck,
@@ -35,17 +42,19 @@ import {
   Tv,
   Smartphone,
   X,
-  Lock
+  Lock,
+  Film
 } from 'lucide-react';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'watch' | 'account' | 'plans'>(() => {
+  const [currentPage, setCurrentPage] = useState<'home' | 'watch' | 'account' | 'plans' | 'movies'>(() => {
     try {
       if (typeof window !== 'undefined') {
         const hash = window.location.hash.toLowerCase();
         if (hash.startsWith('#watch')) return 'watch';
         if (hash === '#plans') return 'plans';
         if (hash === '#account') return 'account';
+        if (hash === '#movies' || hash === '#movie') return 'movies';
       }
     } catch {}
     return 'home';
@@ -98,6 +107,65 @@ export default function App() {
   // User & Auth
   const [user, setUser] = useState<UserProfile | null>(() => getCachedUserProfile());
   const isSubscribed = isUserSubscribed(user);
+
+  // Movies & Video Player states (from neli-central-movies Supabase)
+  const [allMovies, setAllMovies] = useState<Movie[]>([]);
+  const [selectedMovieForDetails, setSelectedMovieForDetails] = useState<Movie | null>(null);
+  const [playingMovie, setPlayingMovie] = useState<Movie | null>(null);
+  const [isSearchExpanded, setIsSearchExpanded] = useState<boolean>(false);
+
+  // Fetch published regular movies from Supabase
+  useEffect(() => {
+    fetchPublishedMovies()
+      .then((data) => {
+        if (data && data.length > 0) setAllMovies(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  const dailyFeaturedMovies = getDailyFeaturedMovies(allMovies, 5);
+
+  // 1.5. Realtime Supabase nelitv_subscriptions active member verification across devices
+  useEffect(() => {
+    const syncSub = async () => {
+      const payingPhone = localStorage.getItem('nelitv_paying_phone') || '';
+      const identifier = user?.phone || user?.email || user?.uid || payingPhone;
+      if (!identifier) return;
+
+      try {
+        const sub = await getSubscriptionFromSupabaseByAny(identifier);
+        if (sub && sub.premium_status === 'active') {
+          const expMs = new Date(sub.expires_at).getTime();
+          if (expMs > Date.now()) {
+            if (!user?.subscription || user.subscription.status !== 'active') {
+              console.log('[Supabase Active Sub synced]:', identifier, sub);
+              const updated: UserProfile = {
+                uid: user ? user.uid : 'tz_' + (payingPhone || 'member'),
+                displayName: user ? user.displayName : `Mteja VIP`,
+                role: user ? user.role : 'user',
+                isAnonymous: user ? user.isAnonymous : false,
+                email: user?.email,
+                phone: user?.phone || sub.phone_number,
+                subscription: {
+                  status: 'active',
+                  planId: 'standard',
+                  planName: 'VIP Supabase',
+                  expiresAt: expMs,
+                  phonePaidWith: sub.phone_number,
+                  updatedAt: new Date().toISOString(),
+                },
+              };
+              setUser(updated);
+              setCachedUserProfile(updated);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Supabase sub verification:', err);
+      }
+    };
+    syncSub();
+  }, [user?.uid, user?.phone, user?.email]);
 
   // 1. Digital Rights Management & Stream Protection
   useEffect(() => {
@@ -243,7 +311,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
-  const navigateTo = (page: 'home' | 'watch' | 'account' | 'plans') => {
+  const navigateTo = (page: 'home' | 'watch' | 'account' | 'plans' | 'movies') => {
     setCurrentPage(page);
     window.location.hash = page === 'home' ? '' : `#${page}`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -347,46 +415,91 @@ export default function App() {
       {/* Kept ONLY these 5 elements in exact order: 1. Logo, 2. Search, 3. Vifurushi, 4. Pakua App, 5. Account */}
       <header className="sticky top-0 z-40 bg-[#050811]/95 backdrop-blur-md border-b border-[#1e293b] shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          {/* Element 1: NeliTV Logo */}
-          <button
-            onClick={handleLogoClick}
-            className="flex items-center gap-2.5 group text-left shrink-0 cursor-pointer"
-            title="Mwanzo - NeliTV"
-          >
-            <div className="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center group-hover:scale-105 transition shadow-lg shadow-blue-900/40">
-              <Play className="w-4 h-4 fill-white text-white translate-x-0.5" />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl font-black tracking-tight text-white">
-                NELI<span className="text-[#3B82F6]">TV</span>
-              </span>
-              <span className="bg-[#2563EB] text-white text-[9px] font-black uppercase px-1.5 py-0.2 rounded font-mono shadow-sm">
-                LIVE
-              </span>
-            </div>
-          </button>
+          {/* Left: Logo & Main Navigation Tabs */}
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Element 1: NeliTV Logo */}
+            <button
+              onClick={handleLogoClick}
+              className="flex items-center gap-2 group text-left shrink-0 cursor-pointer"
+              title="Mwanzo - NeliTV Live"
+            >
+              <div className="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center group-hover:scale-105 transition shadow-lg shadow-blue-900/40">
+                <Play className="w-4 h-4 fill-white text-white translate-x-0.5" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl font-black tracking-tight text-white">
+                  NELI<span className="text-[#3B82F6]">TV</span>
+                </span>
+                <span className="bg-[#2563EB] text-white text-[9px] font-black uppercase px-1.5 py-0.2 rounded font-mono shadow-sm">
+                  LIVE
+                </span>
+              </div>
+            </button>
 
-          {/* Element 2: Search */}
-          <div className="flex flex-1 max-w-md mx-2 sm:mx-6">
-            <div className="relative w-full flex items-center">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tafuta chaneli (Azam Sports, Sinema, Habari)..."
-                className="w-full bg-[#0a0f1d] border border-[#1e293b] focus:border-[#2563EB] rounded-full pl-4 pr-10 py-2 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none transition shadow-inner"
-              />
-              {searchQuery ? (
+            {/* Navigation Tabs: Live TV & Movie */}
+            <nav className="flex items-center gap-1.5 ml-1 sm:ml-3">
+              <button
+                onClick={() => navigateTo('home')}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition active:scale-95 cursor-pointer ${
+                  currentPage === 'home' || currentPage === 'watch'
+                    ? 'bg-[#2563EB] text-white shadow-md shadow-blue-900/40'
+                    : 'bg-[#0a0f1d] hover:bg-[#131d36] text-slate-300 border border-[#1e293b]'
+                }`}
+              >
+                <Tv className="w-3.5 h-3.5" />
+                <span>Live TV</span>
+              </button>
+
+              <button
+                onClick={() => navigateTo('movies')}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-xs font-bold transition active:scale-95 cursor-pointer ${
+                  currentPage === 'movies'
+                    ? 'bg-[#2563EB] text-white shadow-md shadow-blue-900/40'
+                    : 'bg-[#0a0f1d] hover:bg-[#131d36] text-slate-300 border border-[#1e293b]'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Movie</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-black uppercase hidden sm:inline">
+                  Bure
+                </span>
+              </button>
+            </nav>
+          </div>
+
+          {/* Center: Compact Expandable Search Button */}
+          <div className="flex items-center justify-end flex-1 max-w-sm mx-2">
+            {isSearchExpanded ? (
+              <div className="relative w-full flex items-center animate-fade-in">
+                <input
+                  type="text"
+                  autoFocus
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tafuta chaneli au filamu..."
+                  className="w-full bg-[#0a0f1d] border border-[#2563EB] rounded-full pl-4 pr-10 py-1.5 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none transition shadow-inner"
+                />
                 <button
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setIsSearchExpanded(false);
+                  }}
                   className="absolute right-3 text-slate-400 hover:text-white p-1"
+                  title="Funga utafutaji"
                 >
                   <X className="w-4 h-4" />
                 </button>
-              ) : (
-                <Search className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
-              )}
-            </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsSearchExpanded(true)}
+                className="flex items-center gap-1.5 bg-[#0a0f1d] hover:bg-[#131d36] text-slate-300 hover:text-white border border-[#1e293b] px-3 py-1.5 rounded-full text-xs font-bold transition active:scale-95 cursor-pointer shadow-sm"
+                title="Bofya kutafuta chaneli au movie"
+              >
+                <Search className="w-3.5 h-3.5 text-[#3B82F6]" />
+                <span className="hidden md:inline">Tafuta</span>
+              </button>
+            )}
           </div>
 
           {/* Right Header Navigation Group (Elements 3, 4, 5 in exact order) */}
@@ -609,9 +722,16 @@ export default function App() {
           </div>
         )}
 
-        {/* ================= PAGE 2: HOMEPAGE (BLUE BLACK THEME, NO BANNER) ================= */}
+        {/* ================= PAGE 2: HOMEPAGE (LIVE TV + DAILY MOVIES BANNER) ================= */}
         {currentPage === 'home' && (
-          <section className="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-6 animate-fade-in">
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 py-4 space-y-6 animate-fade-in">
+            {/* Daily 5 Featured Movies Hero Banner (Responsive for TV, Desktop, and Mobile) */}
+            <MovieHeroBanner
+              movies={dailyFeaturedMovies}
+              onPlayMovie={(movie) => setPlayingMovie(movie)}
+              onOpenDetails={(movie) => setSelectedMovieForDetails(movie)}
+            />
+
             {/* Category Filter Pills */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
               {[
@@ -709,7 +829,87 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {/* Trending Free Movies Section on Homepage */}
+            {allMovies.length > 0 && (
+              <div className="pt-6 border-t border-[#1e293b] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                      <h2 className="text-base sm:text-xl font-black text-white">
+                        Filamu Maarufu za Bure (Trending Movies)
+                      </h2>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Zinazopendwa zaidi, zenye tafsiri ya Kiswahili bila malipo.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => navigateTo('movies')}
+                    className="flex items-center gap-1 text-xs text-[#3B82F6] hover:text-white font-bold transition cursor-pointer"
+                  >
+                    <span>Ona Zote ({allMovies.length})</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+                  {allMovies.slice(0, 6).map((movie) => (
+                    <div
+                      key={movie.id}
+                      onClick={() => setSelectedMovieForDetails(movie)}
+                      className="group rounded-2xl bg-[#0a0f1d] border border-[#1e293b] hover:border-[#2563EB] overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col"
+                    >
+                      <div className="relative aspect-[2/3] w-full overflow-hidden bg-black">
+                        {movie.poster_path ? (
+                          <img
+                            src={movie.poster_path}
+                            alt={movie.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-900 text-slate-500">
+                            <Film className="w-8 h-8" />
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2">
+                          <span className="bg-emerald-600 text-white font-black text-[8px] px-1.5 py-0.5 rounded shadow uppercase">
+                            Bure
+                          </span>
+                        </div>
+                        {movie.year && (
+                          <div className="absolute top-2 right-2 bg-black/70 text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            {movie.year}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1">
+                        <h4 className="text-xs font-bold text-white truncate group-hover:text-[#3B82F6] transition">
+                          {movie.title}
+                        </h4>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                          <span className="truncate">{movie.category_type || 'Filamu'}</span>
+                          {movie.runtime ? <span>{movie.runtime}m</span> : null}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
+        )}
+
+        {/* ================= PAGE: MOVIES CATALOGUE ================= */}
+        {currentPage === 'movies' && (
+          <MoviesPage
+            onSelectMovie={(movie) => setSelectedMovieForDetails(movie)}
+            onPlayMovie={(movie) => setPlayingMovie(movie)}
+          />
         )}
 
         {/* ================= PAGE 3: VIFURUSHI (PLANS) PAGE ================= */}
@@ -874,6 +1074,42 @@ export default function App() {
         <AppDownloadModal
           isOpen={isAppDownloadOpen}
           onClose={() => setIsAppDownloadOpen(false)}
+        />
+      )}
+
+      {/* Movie Details Modal */}
+      {selectedMovieForDetails && (
+        <MovieDetailsModal
+          movie={selectedMovieForDetails as any}
+          isOpen={Boolean(selectedMovieForDetails)}
+          onClose={() => setSelectedMovieForDetails(null)}
+          onPlay={(m: any) => {
+            setSelectedMovieForDetails(null);
+            setPlayingMovie(m);
+          }}
+        />
+      )}
+
+      {/* Movie Video Player (Full Bunny CDN MP4 Support) */}
+      {playingMovie && (
+        <MediaStreamPlayer
+          mediaType="movie"
+          movie={{
+            id: playingMovie.id,
+            title: playingMovie.title,
+            streamUrl: playingMovie.stream_url,
+            narrated: playingMovie.narrated,
+            narrationLanguage: playingMovie.narration_language,
+            overview: playingMovie.overview || '',
+            posterPath: playingMovie.poster_path || '',
+            backdropPath: playingMovie.backdrop_path || '',
+            year: playingMovie.year || 2025,
+            runtime: playingMovie.runtime || 100,
+            genres: playingMovie.genres || [],
+            category: playingMovie.category_type || 'General',
+            rating: 8.8,
+          } as any}
+          onClose={() => setPlayingMovie(null)}
         />
       )}
     </div>

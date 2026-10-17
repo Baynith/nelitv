@@ -178,7 +178,7 @@ export async function collectPayment(params: CollectPaymentParams): Promise<Coll
 
       if (isCorsOrFetchErr) {
         throw new Error(
-          'Seva ya malipo (Backend API) haipatikani kwenye Firebase Hosting. Firebase Hosting inahifadhi tovuti pekee (static files). Ili kupokea malipo ya USSD, unganisha seva ya bure (mfano Render.com au Vercel) kisha weka URL yake kwenye mfumo.'
+          'Imeshindwa kutuma ombi la malipo. Tafadhali hakikisha namba yako ina salio kisha jaribu tena baadae.'
         );
       }
 

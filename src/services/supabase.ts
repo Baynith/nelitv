@@ -107,6 +107,51 @@ export async function getSubscriptionFromSupabase(phone: string): Promise<NeliTV
 }
 
 /**
+ * Retrieves a customer's active subscription by either phone, email, or user_id
+ */
+export async function getSubscriptionFromSupabaseByAny(
+  identifier: string
+): Promise<NeliTVSubscription | null> {
+  const client = getSupabase();
+  if (!client) return null;
+  const raw = String(identifier || '').trim();
+  if (!raw) return null;
+
+  try {
+    const cleanPhone = normalizePhoneForSupabase(raw);
+    let query = client.from('nelitv_subscriptions').select('id, created_at, phone_number, premium_status, expires_at');
+
+    if (cleanPhone && cleanPhone.length >= 10) {
+      query = query.or(`phone_number.eq.${cleanPhone},user_email.eq.${raw.toLowerCase()},user_id.eq.${raw}`);
+    } else if (raw.includes('@')) {
+      query = query.eq('user_email', raw.toLowerCase());
+    } else {
+      query = query.eq('user_id', raw);
+    }
+
+    const { data, error } = await query
+      .order('expires_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const expiresAtMs = new Date(data.expires_at).getTime();
+    const isStillActive = expiresAtMs > Date.now() && data.premium_status === 'active';
+
+    return {
+      id: data.id,
+      created_at: data.created_at,
+      phone_number: data.phone_number,
+      premium_status: isStillActive ? 'active' : 'expired',
+      expires_at: data.expires_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Saves or updates a customer's subscription in "nelitv_subscriptions"
  */
 export async function saveSubscriptionToSupabase(

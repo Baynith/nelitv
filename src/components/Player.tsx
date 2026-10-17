@@ -3,6 +3,15 @@ import shaka from 'shaka-player/dist/shaka-player.ui.js';
 import 'shaka-player/dist/controls.css';
 import Hls from 'hls.js';
 import { Channel } from '../data/channels';
+
+// Guarantee Shaka polyfills are active before any component mounts
+if (typeof window !== 'undefined' && shaka && shaka.polyfill) {
+  try {
+    shaka.polyfill.installAll();
+  } catch (e) {
+    console.warn('Shaka polyfill install:', e);
+  }
+}
 import { UserProfile, isUserSubscribed } from '../services/firebase';
 import {
   getInstantToken,
@@ -110,10 +119,6 @@ export const Player: React.FC<PlayerProps> = ({
     return isUserTrialExpired(user);
   });
 
-  // Install shaka polyfills once
-  useEffect(() => {
-    shaka.polyfill.installAll();
-  }, []);
 
   // Sync trial on user change
   useEffect(() => {
@@ -405,37 +410,40 @@ export const Player: React.FC<PlayerProps> = ({
         player.configure({
           drm: drmConfig,
           streaming: {
-            lowLatencyMode: true,
-            gapDetectionThreshold: 0.5,
+            lowLatencyMode: false,
+            safeSeekOffset: 8,
+            bufferingGoal: 8.0,
+            rebufferingGoal: 3.5,
+            bufferBehind: 15,
+            gapDetectionThreshold: 0.8,
             stallEnabled: true,
-            stallThreshold: 0.5,
-            stallSkip: 0.2,
-            bufferingGoal: 0.8,
-            rebufferingGoal: 0.2,
-            bufferBehind: 10,
+            stallThreshold: 2.5,
+            stallSkip: 0.8,
+            inaccurateManifestTolerance: 2,
             retryParameters: {
-              maxAttempts: 3,
-              baseDelay: 200,
-              timeout: 4500,
+              maxAttempts: 4,
+              baseDelay: 300,
+              backoffFactor: 1.5,
+              timeout: 6000,
             },
           },
           manifest: {
             dash: {
               autoCorrectDrift: true,
-              ignoreMinBufferTime: true,
+              ignoreMinBufferTime: false,
             },
             hls: {
               ignoreManifestProgramDateTime: true,
             },
             retryParameters: {
-              maxAttempts: 3,
-              timeout: 5000,
+              maxAttempts: 4,
+              timeout: 6000,
             },
           },
           abr: {
             enabled: qualityMode === 'Auto',
-            defaultBandwidthEstimate: 500000,
-            switchInterval: 5,
+            defaultBandwidthEstimate: 1200000,
+            switchInterval: 10,
             bandwidthUpgradeTarget: 0.7,
             bandwidthDowngradeTarget: 0.85,
           },
@@ -458,14 +466,16 @@ export const Player: React.FC<PlayerProps> = ({
         });
 
         player.addEventListener('error', async (event: any) => {
-          if (!isCancelled) {
-            console.warn('[Shaka Stream Error]:', channel.name, event.detail);
-            setIsLoading(false);
-            setErrorMsg(`Kituo hiki (${channel.name}) hakirushi matangazo kwa sasa. Tafadhali chagua kituo kingine pembeni.`);
-            if (targetVideo) {
-              await teardownActiveEngines(targetVideo);
-            }
+          if (isCancelled) return;
+          const err = event.detail;
+          // Ignore recoverable warnings (severity 1): Shaka recovers automatically from minor track/codec warnings
+          if (err && err.severity === 1) {
+            console.info('[Shaka Recoverable Warning]:', err.code, err.message);
+            return;
           }
+          console.warn('[Shaka Critical Stream Error]:', channel.name, err);
+          setIsLoading(false);
+          setErrorMsg(`Kituo hiki (${channel.name}) hakirushi matangazo kwa sasa. Tafadhali chagua kituo kingine pembeni.`);
         });
 
         player.addEventListener('adaptation', () => {
@@ -478,8 +488,17 @@ export const Player: React.FC<PlayerProps> = ({
           } catch {}
         });
 
-        // Load stream with isolated error handling
-        await player.load(config.url);
+        // Load stream with isolated error handling and original URL fallback
+        try {
+          await player.load(config.url);
+        } catch (initialLoadErr) {
+          console.warn('[Shaka Initial Load Failed, trying fallback streamUrl]:', initialLoadErr);
+          if (channel.streamUrl && channel.streamUrl !== config.url) {
+            await player.load(channel.streamUrl);
+          } else {
+            throw initialLoadErr;
+          }
+        }
 
         if (isCancelled) return;
         setIsLoading(false);
@@ -546,13 +565,41 @@ export const Player: React.FC<PlayerProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
-    const onWaiting = () => setIsLoading(true);
+    let waitingTimeout: any = null;
+
+    const onWaiting = () => {
+      // Debounce loading indicator so momentary micro-buffering doesn't flash the loader
+      if (waitingTimeout) clearTimeout(waitingTimeout);
+      waitingTimeout = setTimeout(() => {
+        setIsLoading(true);
+      }, 450);
+    };
+
     const onPlaying = () => {
+      if (waitingTimeout) {
+        clearTimeout(waitingTimeout);
+        waitingTimeout = null;
+      }
       setIsLoading(false);
       setIsPaused(false);
     };
+
+    const onTimeUpdate = () => {
+      if (waitingTimeout) {
+        clearTimeout(waitingTimeout);
+        waitingTimeout = null;
+      }
+      setIsLoading(false);
+    };
+
     const onPause = () => setIsPaused(true);
-    const onPlay = () => setIsPaused(false);
+    const onPlay = () => {
+      if (waitingTimeout) {
+        clearTimeout(waitingTimeout);
+        waitingTimeout = null;
+      }
+      setIsPaused(false);
+    };
     const onVolumeChange = () => {
       setIsMuted(video.muted || video.volume === 0);
       setVolume(video.volume);
@@ -560,13 +607,16 @@ export const Player: React.FC<PlayerProps> = ({
 
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('playing', onPlaying);
+    video.addEventListener('timeupdate', onTimeUpdate);
     video.addEventListener('pause', onPause);
     video.addEventListener('play', onPlay);
     video.addEventListener('volumechange', onVolumeChange);
 
     return () => {
+      if (waitingTimeout) clearTimeout(waitingTimeout);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('playing', onPlaying);
+      video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('pause', onPause);
       video.removeEventListener('play', onPlay);
       video.removeEventListener('volumechange', onVolumeChange);

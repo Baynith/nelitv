@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { CHANNELS, Channel } from '../data/channels';
 
 interface UseTVRemoteProps {
-  currentPage: 'home' | 'watch' | 'account' | 'plans';
+  currentPage: 'home' | 'watch' | 'account' | 'plans' | 'movies';
   selectedChannel: Channel;
   onSelectChannel: (channel: Channel) => void;
   onGoHome: () => void;

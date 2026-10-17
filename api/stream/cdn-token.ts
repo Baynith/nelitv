@@ -13,7 +13,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json(data);
   } catch {
     return res.status(200).json({
-      token: "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzkyMTYyNjE2Iiwic2lwIjoiIiwicGF0aCI6IiIsInNlc3Npb25fY2RuX2lkIjoiNmVkYTlmNTZlMmE5YzU5MSIsInNlc3Npb25faWQiOiIiLCJjbGllbnRfaWQiOiI0ODQwODMyIiwiZGV2aWNlX2lkIjoiIiwibWF4X3Nlc3Npb25zIjowLCJzZXNzaW9uX2R1cmF0aW9uIjowLCJ1cmwiOiJodHRwczovLzEwMi4yMDguMjQ0LjkiLCJzZXNzaW9uX3RpbWVvdXQiOjAsImF1ZCI6IjciLCJzb3VyY2VzIjpbM119.6OD9tFE-CBnuqKrGEV6VAUTFZza2qzYTR16VpOaqtIfXzZ7hC9bjy0mZi-lLya8DiQHYohB2fF3IInSiLIPbEg==",
+      token: "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzkyMjYyMjM0Iiwic2lwIjoiIiwicGF0aCI6IiIsInNlc3Npb25fY2RuX2lkIjoiMjkzYzkyYmQ0YjJiMjUyMyIsInNlc3Npb25faWQiOiIiLCJjbGllbnRfaWQiOiI0ODQwODMyIiwiZGV2aWNlX2lkIjoiIiwibWF4X3Nlc3Npb25zIjowLCJzZXNzaW9uX2R1cmF0aW9uIjowLCJ1cmwiOiJodHRwczovLzEwMi4yMDguMjQ0LjkiLCJzZXNzaW9uX3RpbWVvdXQiOjAsImF1ZCI6IjciLCJzb3VyY2VzIjpbM119.J001pM4Oy3ufKjgQVhdGTJZW_N0pA2gQx8Yf7IdX0SaS_7aAjckF09uPjJ0at5evsg0T5sQ3MHbDzT84tze8DA==",
       cdnHost: "https://cdnedgch2.azamtvltd.co.tz",
       source: "live"
     });

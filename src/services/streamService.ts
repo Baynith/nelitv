@@ -2,8 +2,29 @@
 import { Channel } from '../data/channels';
 
 // Active live token from Azam CDN / streamzone.fun (verified 200 OK)
-let cachedToken = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzkyMTYyNjE2Iiwic2lwIjoiIiwicGF0aCI6IiIsInNlc3Npb25fY2RuX2lkIjoiNmVkYTlmNTZlMmE5YzU5MSIsInNlc3Npb25faWQiOiIiLCJjbGllbnRfaWQiOiI0ODQwODMyIiwiZGV2aWNlX2lkIjoiIiwibWF4X3Nlc3Npb25zIjowLCJzZXNzaW9uX2R1cmF0aW9uIjowLCJ1cmwiOiJodHRwczovLzEwMi4yMDguMjQ0LjkiLCJzZXNzaW9uX3RpbWVvdXQiOjAsImF1ZCI6IjciLCJzb3VyY2VzIjpbM119.6OD9tFE-CBnuqKrGEV6VAUTFZza2qzYTR16VpOaqtIfXzZ7hC9bjy0mZi-lLya8DiQHYohB2fF3IInSiLIPbEg==";
+let cachedToken = "eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzkyMjYyMjM0Iiwic2lwIjoiIiwicGF0aCI6IiIsInNlc3Npb25fY2RuX2lkIjoiMjkzYzkyYmQ0YjJiMjUyMyIsInNlc3Npb25faWQiOiIiLCJjbGllbnRfaWQiOiI0ODQwODMyIiwiZGV2aWNlX2lkIjoiIiwibWF4X3Nlc3Npb25zIjowLCJzZXNzaW9uX2R1cmF0aW9uIjowLCJ1cmwiOiJodHRwczovLzEwMi4yMDguMjQ0LjkiLCJzZXNzaW9uX3RpbWVvdXQiOjAsImF1ZCI6IjciLCJzb3VyY2VzIjpbM119.J001pM4Oy3ufKjgQVhdGTJZW_N0pA2gQx8Yf7IdX0SaS_7aAjckF09uPjJ0at5evsg0T5sQ3MHbDzT84tze8DA==";
 let isRefreshingToken = false;
+
+// Check if token is expired or about to expire
+function isJwtExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return true;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const jsonStr = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonStr);
+    const exp = Number(payload.exp);
+    if (!exp) return false;
+    return exp < (Date.now() / 1000) + 60;
+  } catch {
+    return false;
+  }
+}
 
 // Background token updater: keeps the token perpetually fresh without any expiration blocking
 async function refreshCdnTokenInBackground() {
@@ -22,7 +43,7 @@ async function refreshCdnTokenInBackground() {
 
     if (res.ok) {
       const data = await res.json();
-      if (data && data.token) {
+      if (data && data.token && !isJwtExpired(data.token)) {
         cachedToken = data.token;
         try {
           localStorage.setItem('nelistream_cdn_token', cachedToken);
@@ -35,7 +56,7 @@ async function refreshCdnTokenInBackground() {
       const localRes = await fetch('/api/stream/cdn-token');
       if (localRes.ok) {
         const localData = await localRes.json();
-        if (localData && localData.token) {
+        if (localData && localData.token && !isJwtExpired(localData.token)) {
           cachedToken = localData.token;
           try {
             localStorage.setItem('nelistream_cdn_token', cachedToken);
@@ -51,15 +72,20 @@ async function refreshCdnTokenInBackground() {
 // Initial background refresh on module load
 if (typeof window !== 'undefined') {
   refreshCdnTokenInBackground().catch(() => {});
-  // Periodically refresh in background every 15 minutes
-  setInterval(refreshCdnTokenInBackground, 15 * 60 * 1000);
+  // Periodically refresh in background every 10 minutes
+  setInterval(refreshCdnTokenInBackground, 10 * 60 * 1000);
 }
 
-// INSTANT TOKEN: Returns token in 0ms without any expire date check
+// INSTANT TOKEN: Returns valid token in 0ms without any blocking
 export function getInstantToken(): string {
   try {
     const saved = localStorage.getItem('nelistream_cdn_token');
-    if (saved && saved.length > 50) return saved;
+    if (saved && saved.length > 50 && !isJwtExpired(saved)) {
+      return saved;
+    }
+    if (saved && isJwtExpired(saved)) {
+      localStorage.removeItem('nelistream_cdn_token');
+    }
   } catch {}
   return cachedToken;
 }
